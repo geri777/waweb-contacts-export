@@ -1,4 +1,4 @@
-# Export your Whatsapp contacts in Firefox 
+# Export your Whatsapp contacts in CHROME ENGLISH
 
 With pure Javascript which you enter in the Dev Console of Firefox you can export your contacts along with the last message
 into a CSV File.
@@ -17,11 +17,6 @@ The script can be stopped by entering the following command into the Console:
 ```js
 window.__stopWhatsappExport = true; 
 ```
-## Note ⚠
-
-*This script works for the GERMAN Whatsapp Version only.*
-The Script uses a couple of selectors to find the contact details overlay, etc. The selectors search for titles like "Kontaktinfo", which is the German word for "Contact Details", for example
-If you use any other language than German you need to modify the script, i.e. replace these words with your local translation. You are very welcome to share the modifications.
 
 ## Script
 
@@ -29,7 +24,7 @@ This is the script - just copy / paste it:
 
 ```js
 (async () => {
-  window.__stopWhatsappExport = false; // ← Cancel control
+  window.__stopWhatsappExport = false;
 
   const delay = ms => new Promise(res => setTimeout(res, ms));
   const seen = new Set();
@@ -39,12 +34,12 @@ This is the script - just copy / paste it:
     let name = "Unnamed";
     let number = null;
 
-    let kontaktinfoDiv = Array.from(document.querySelectorAll("div"))
-      .find(el => el.textContent?.trim() === "Kontaktinfo");
+    let contactInfoDiv = Array.from(document.querySelectorAll("div"))
+      .find(el => el.textContent?.trim() === "Contact info");
 
-    if (!kontaktinfoDiv) return { name, number };
+    if (!contactInfoDiv) return { name, number };
 
-    const parent = kontaktinfoDiv.closest("header")?.parentElement;
+    const parent = contactInfoDiv.closest("header")?.parentElement;
     if (!parent) return { name, number };
 
     const siblingTexts = Array.from(parent.querySelectorAll("span.selectable-text.copyable-text"));
@@ -58,9 +53,9 @@ This is the script - just copy / paste it:
       }
 
       if (
-        name === "Unbenannt" &&
+        name === "Unnamed" &&
         text &&
-        !text.toLowerCase().includes("kontaktinfo") &&
+        !text.toLowerCase().includes("contact info") &&
         !/^\+?\d[\d\s\-().]{6,}$/.test(text)
       ) {
         name = text;
@@ -69,7 +64,7 @@ This is the script - just copy / paste it:
       if (
         name === "Unnamed" &&
         title &&
-        !title.toLowerCase().includes("kontaktinfo") &&
+        !title.toLowerCase().includes("contact info") &&
         !/^\+?\d[\d\s\-().]{6,}$/.test(title)
       ) {
         name = title;
@@ -81,7 +76,7 @@ This is the script - just copy / paste it:
     return { name, number };
   }
 
-  console.log("📋 Starting WhatsApp-Contacts-Export (TSV)...");
+  console.log("📋 Starting WhatsApp Contacts Export (TSV)...");
 
   let stableCycles = 0;
 
@@ -104,65 +99,60 @@ This is the script - just copy / paste it:
       seen.add(key);
       foundNew = true;
 
-      // Scrollen und Klick
-      const outer = listitem.firstElementChild;
-      const middle = outer?.firstElementChild;
-      const inner = middle?.firstElementChild;
-      const clickTarget = inner?.children[1];
+      const clickTarget = listitem.querySelector('div[role="button"]') || listitem;
       if (!clickTarget) continue;
 
       clickTarget.scrollIntoView({ behavior: "smooth", block: "center" });
-      ["pointerdown", "mousedown", "mouseup", "click"].forEach(type => {
-        const event = new PointerEvent(type, {
-          bubbles: true,
-          cancelable: true,
-          composed: true,
-          pointerType: "mouse",
-          isPrimary: true,
-        });
-        clickTarget.dispatchEvent(event);
-      });
+      await delay(300);
 
-      await delay(1200);
+      clickTarget.click();
+      await delay(1500);
 
-      const profileButton = document.querySelector('div[role="button"][title="Profildetails"]');
-      if (!profileButton) continue;
-      profileButton.click();
-      await delay(1200);
+      // Updated profile button selector
+      const profileButton = [...document.querySelectorAll('div[role="button"]')]
+        .find(btn =>
+          btn.title?.trim().toLowerCase().includes("profile") ||
+          btn.getAttribute("data-icon") === "info"
+        );
+
+      if (profileButton) {
+        profileButton.click();
+        await delay(1200);
+      } else {
+        console.warn("⚠️ Profile button not found for", name);
+        continue;
+      }
 
       const { number } = extractContactInfoFromDialog();
 
-      // Search field focus: as a UI focus reset.
-      const searchTarget = document.querySelector('div[role="textbox"][aria-label="Sucheingabefeld"] > p.selectable-text.copyable-text');
+      const searchTarget = document.querySelector(
+        'div[role="textbox"][aria-label="Search input textbox"] p.selectable-text.copyable-text'
+      );
       if (searchTarget) {
-        const ev = new MouseEvent("click", { bubbles: true, cancelable: true, view: window });
-        searchTarget.dispatchEvent(ev);
+        searchTarget.click();
         await delay(500);
       }
 
       output.push([name, number || "", lastMessage].join("\t"));
-      console.log("✔️", name, number || "keine Nummer", lastMessage || "no message");
+      console.log("✔️", name, number || "no number", lastMessage || "no message");
     }
 
-    if (!foundNew) {
-      stableCycles++;
-    } else {
-      stableCycles = 0;
-    }
-
+    stableCycles = foundNew ? 0 : stableCycles + 1;
     await delay(500);
   }
 
   if (output.length > 0) {
-    const header = "Name\tNummer\tLast Message";
+    const header = "Name\tNumber\tLast Message";
     const blob = new Blob([header + "\n" + output.join("\n")], { type: "text/tab-separated-values" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "whatsapp_kontakte_export.tsv";
+    a.download = "whatsapp_contacts_export.tsv";
+    document.body.appendChild(a);
     a.click();
-    console.log(`✅ TSV-Export finished: ${output.length} contacts saved.`);
+    a.remove();
+    console.log(`✅ Export complete: ${output.length} contacts saved.`);
   } else {
-    console.error("❌ Sorry, not a single contact could be extracted.`);
+    console.error("❌ No contacts were extracted.");
   }
 })();
 ```
