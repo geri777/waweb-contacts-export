@@ -1,11 +1,11 @@
 # Export your Whatsapp contacts in CHROME ENGLISH
 
-With pure Javascript which you enter in the Dev Console of Firefox you can export your contacts along with the last message
+With pure Javascript which you enter in the Dev Console of Chrome you can export your contacts along with the last message
 into a CSV File.
 
 ## Instructions
 
-- Open Whatsapp in Firefox
+- Open Whatsapp in Chrome
 - Launch Developer Console (Press F12)
 - Navigate to the "Console" Tab
 - Copy and paste the Javascript of script.js into the Console and press Enter
